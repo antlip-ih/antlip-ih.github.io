@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Link Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f2f5;
+            color: #333;
+            text-align: center;
+        }
+        .container {
+            padding: 2rem;
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        p {
+            font-size: 1rem;
+            color: #666;
+            line-height: 1.5;
+        }
+        a {
+            color: #007aff;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container" id="status-container">
+        <h1>Attempting to open the app...</h1>
+        <p>If you have the app installed, it should open automatically. If not, you will see a fallback message here shortly.</p>
+    </div>
+
+    <script>
+        /**
+         * Attempts to deep link to a specific URI and provides a fallback if the app isn't installed.
+         * @param {string} uri - The custom URI scheme to open (e.g., 'yourapp://path').
+         * @param {Function} fallback - The function to execute if the app doesn't open.
+         * @param {number} timeout - The time in milliseconds to wait before triggering the fallback.
+         */
+        function attemptDeepLink(uri, fallback, timeout = 2000) {
+            // A variable to store the timer.
+            let fallbackTimer;
+
+            // A function to clear the timer if we successfully open the app.
+            const clearTimers = () => {
+                clearTimeout(fallbackTimer);
+                document.removeEventListener('visibilitychange', handleVisibilityChange);
+            };
+
+            // This event fires when the browser tab loses or gains focus.
+            // If the app opens, this tab will become 'hidden'.
+            const handleVisibilityChange = () => {
+                if (document.visibilityState === 'hidden') {
+                    console.log("Browser tab lost focus. Assuming app opened successfully.");
+                    clearTimers();
+                }
+            };
+
+            // Listen for the browser tab losing focus.
+            document.addEventListener('visibilitychange', handleVisibilityChange);
+
+            // Set a timer. If it's not cleared within the timeout period,
+            // we assume the app is not installed and run the fallback.
+            fallbackTimer = setTimeout(() => {
+                console.log(`Timeout reached. App likely not installed. Running fallback.`);
+                fallback();
+                // Clean up the event listener once the fallback is triggered.
+                document.removeEventListener('visibilitychange', handleVisibilityChange);
+            }, timeout);
+
+            // This is the crucial part: attempt to navigate to the custom URI.
+            // If the app is installed, the browser will hand off to the OS,
+            // which will open the app. If not, this command fails silently.
+            window.location.href = uri;
+        }
+
+        // --- Configuration ---
+        const DEEP_LINK_URI = "doctorondemand://urgent-care/start";
+        const APP_STORE_URL = "https://apps.apple.com/us/app/doctor-on-demand/id591948336";
+        const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.doctorondemand.android.patient";
+
+        // This is the fallback function that runs if the app doesn't open.
+        const handleFallback = () => {
+            const statusContainer = document.getElementById('status-container');
+            statusContainer.innerHTML = `
+                <h1>App Not Found</h1>
+                <p>It looks like the app isn't installed on your device. Please download it from the store:</p>
+                <p>
+                    <a href="${APP_STORE_URL}" target="_blank">Download on the App Store</a>
+                </p>
+                <p>
+                    <a href="${PLAY_STORE_URL}" target="_blank">Get it on Google Play</a>
+                </p>
+            `;
+        };
+
+        // Run the deep link attempt when the page loads.
+        window.onload = () => {
+            attemptDeepLink(DEEP_LINK_URI, handleFallback);
+        };
+    </script>
+
+</body>
+</html>
